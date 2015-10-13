@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Guild Wars 2 Mapping Link</title>
+        <link rel="stylesheet" href="css/leaflet.css" />
+		<link rel="stylesheet" href="css/style.css" />
+		<link rel="stylesheet" href="css/contextmenu.css" />
+		<script src="js/jquery.min.js"></script>
+        <script src="js/leaflet.js"></script>
+		<script src="js/icons.js"></script>
+		<script src="js/contextmenu.js"></script>
+        </head>
+		
+<body>
+<div style="float: left; margin-left: 5px;">
+	<ul class="navigation">
+		<a class="main" href="index.html">Home</a>
+	</ul>
+</div>	
+<div style="float: left; margin-left: 5px;">
+	<ul class="navigation">
+		<a class="main" href="#">Show</a>
+		<li><img src="images/wpNav.png"><input type="checkbox" id="showWaypoints" name="showWaypoints" onClick="markerOptions()"> Waypoint </li>
+		<li><img src="images/heartNav.png"><input type="checkbox" id="showHearts" name="showHearts" onClick="markerOptions()"> Hearts</li>
+		<li><img src="images/skillNav.png"><input type="checkbox" id="showSkills" name="showSkills" onClick="markerOptions()"> Skills</li>
+		<li><img src="images/vistaNav.png"><input type="checkbox" id="showVistas" name="showVistas" onClick="markerOptions()"> Vistas</li>
+		<li><img src="images/poiNav.png"><input type="checkbox" id="showPOI" name="showPOI" onClick="markerOptions()"> POI</li>
+
+	</ul>
+</div>
+<div style="float: left; margin-left: 5px;">
+	<ul class="navigation">
+		<a class="main" href="#">Options</a>
+		<li>Online Options:</li>
+		<li><img src="images/trackNav.png"><input type="checkbox" name="trackPlayer" id="trackPlayer"> Auto-Center</li>
+		<li><img src="images/footprintNav.png"><input type="checkbox" id="playerFootprints" name="playerFootprints"> Player Trail</li>
+		<li><form>Refresh Rate in ms:<input type="text" name="refreshRate" class="refreshRate" id="refreshRate" value="50" style="width: 35px;"></form></li>
+		<!--<li><a href="#" onClick="linkAddress = window.prompt('Use this to set the name of the computer that is running Gw2MappingLink','localhost');"><b>Link Location [ALPHA]</b></a></li>-->
+		<li></li>
+		<li>Offline Options:</li>
+		<li>View Map:
+			<select onchange="addMarkers(this.options[this.selectedIndex].value);">
+				<option value="Lion's Arch (Enemy Controlled)">Lion's Arch</option>
+				<option value="Straits of Devastation">Straits of Devastation</option>
+				<option value="Gendarran Fields">Gendarran Fields</option>
+				<option value="Sparkfly Fen">Sparkfly Fen</option>
+				<option value="Snowden Drifts">Snowden Drifts</option>
+				<option value="Queensdale">Queensdale</option>
+				<option value="Brisban Wildlands">Brisban Wildlands</option>
+				<option value="Kessex Hills">Kessex Hills</option>
+				<option value="Blazeridge Steppes">Blazeridge Steppes</option>
+				<option value="Cursed Shore">Cursed Shore</option>
+				<option value="Caledon Forest">Caledon Forest</option>
+				<option value="Plains of Ashford">Plains of Ashford</option>
+				<option value="Bloodtide Coast">Bloodtide Coast</option>
+				<option value="Fireheart Rise">Fireheart Rise</option>
+				<option value="Frostgorge Sound">Frostgorge Sound</option>
+				<option value="Wayfarer Foothills">Wayfarer Foothills</option>
+				<option value="Southsun Cove">Southsun Cove</option>
+				<option value="Lornar's Pass">Lornar's Pass</option>
+				<option value="Fields of Ruin">Fields of Ruin</option>
+				<option value="Dredgehaunt Cliffs">Dredgehaunt Cliffs</option>
+				<option value="Timberline Falls">Timberline Falls</option>
+				<option value="Metrica Province">Metrica Province</option>
+				<option value="Diessa Plateau">Diessa Plateau</option>
+				<option value="Harathi Hinterlands">Harathi Hinterlands</option>
+				<option value="Mount Maelstrom">Mount Maelstrom</option>
+				<option value="Iron Marches">Iron Marches</option>
+				<option value="Malchor's Leap">Malchor's Leap</option>
+				<option value="Tower of Nightmares">Tower of Nightmares</option>
+			</select>
+		</li>
+	</ul>
+</div>
+<div style="float: left; margin-left: 5px;">
+	<ul class="navigation">
+		<a class="main" href="gw2mappinglink-v1.2.zip">Download v1.2</a>
+	</ul>
+</div>
+<div style="float: left; margin-left: 5px;">
+	<ul class="navigation">
+		<a class="main" onclick="document.getElementById('overlay').style.display='block';document.getElementById('fade').style.display='block'" href="javascript:void(0)">Comment</a>
+	</ul>
+</div>
+<div id="overlay">
+	<iframe src="comments.html" width="950px" height="500px" seamless="true"></iframe>
+	<a onclick="document.getElementById('overlay').style.display='none';document.getElementById('fade').style.display='none'"href="javascript:void(0)"</a>
+</div>
+<div id="map"></div>
+	
+<left>
+
+
+<script>
+
+
+$( document ).ready(function() {
+//alert("Thanks for stopping by!\n\n**IMPORTANT**\nPlease update to Gw2MappingLink-v1.2\n\nRecent Changes:\n1. Fixed bug where no POIs were showing in Bloodtide Coast and Blazeridge Steppes \n2.Added support for basic WVW \n3. Added options to view map points while not connected to linker \n4. Added adjustable refresh rate(requires new updater)\n\n\nLike what I've done? Send me a tip @ Retardeted.9315 \n\nContact: retardeted@gmail.com" );
+	});
+document.getElementById("showWaypoints").checked = true;
+document.getElementById("showHearts").checked = true;
+document.getElementById("showSkills").checked = true;
+document.getElementById("showVistas").checked = true;
+document.getElementById("showPOI").checked = true;
+
+//Global vars
+var playerMarker = null;
+var cameraMarker = null;
+var footprintMarker = null;
+var markerGroup;
+var footprintGroup;
+var mapName = null;
+var currentContinent = 1; //continent as used for WvW
+var multiplier = 1; //WvW coordinates must be multiplied be 2 to be accurate, while PVE is accurate already. Could update Linker to publish this instead of relying on JS
+var continent = 1;
+var linkAddress = "localhost"; //Work in progress
+var centerCount = 0;
+var interval;
+var matchID;
+var worldID;
+
+//player position update interval
+interval = setInterval("updatePosition()",document.getElementById("refreshRate").value);
+//setInterval("getMatchId()",2000);
+
+//update refresh rate on form change
+$( ".refreshRate" ).change(function() {
+	clearInterval(interval);
+	interval = setInterval("updatePosition()",document.getElementById("refreshRate").value);
+});
+	
+	
+//sets multiplier and continent based on JSON map name
+$.getJSON("http://localhost:1337/",  function (jsonData) {
+			if(jsonData.mapName == " Borderlands" || jsonData.mapName == "Eternal Battlegrounds" || jsonData.mapName == "Edge of the Mists" || jsonData.mapName == "Obsidian Sanctum"){
+			continent = 2;
+			multiplier = 2;
+			}
+			else{
+				continent = 1;
+				multiplier = 1;
+			}
+	
+			});
+	var map;
+
+	function unproject(coord) {
+		return map.unproject(coord, map.getMaxZoom());
+		
+	}
+		
+	var southWest, northEast;
+	
+	map = L.map("map", {
+		minZoom: 0,
+		maxZoom: 7,
+		crs: L.CRS.Simple,
+		zoomControl: false
+	}).setView([0, 0], 0);
+	
+	southWest = unproject([0, 32768]);
+	northEast = unproject([32768, 0]);
+	
+	map.setMaxBounds(new L.LatLngBounds(southWest, northEast));
+
+	tiles = L.tileLayer("https://tiles.guildwars2.com/"+continent+"/1/{z}/{x}/{y}.jpg", {
+		minZoom: 0,
+		maxZoom: 7,
+		continuousWorld: true
+	});
+	tiles.addTo(map);
+
+var cx;
+var cy;
+function onMapClick(e) {
+	//this section will be used along side PHP function to place gathering nodes
+	console.log("You clicked the map at " + map.project(e.latlng));
+	cx = e.latlng.lat;
+	cy = e.latlng.lng;
+	post();
+	newMarker = new L.marker([cx,cy]).addTo(map);
+	alert("testing");
+}
+
+function post(){
+	alert("test");
+	var hr = new XMLHttpRequest();
+	var url = "addNode.php";
+	var vars = "node_type=omnomnom_berry&coordinateX="+cx+"&coordinateY="+cy;
+	hr.open("POST", url, true);
+	hr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+	hr.onreadystatechange = function() {
+		console.log(hr);
+		if(hr.readyState == 4 && hr.status == 200) {
+			var return_data = hr.responseText;
+		}
+	}
+	hr.send(vars);
+}
+
+var layerGroup = null;		
+function addMarkers(mapName) {	
+	if(layerGroup != null){
+		layerGroup.clearLayers();
+	}
+	//placement of points of interest as pulled from the API
+	$.getJSON("https://api.guildwars2.com/v1/map_floor.json?continent_id="+continent+"&floor=2", function (data) {
+		var points = new Array();			
+		var region, gameMap, i, il, poi, j, jl, skill, k, kl, heart;            
+		for (region in data.regions) {
+			region = data.regions[region];
+			for (gameMap in region.maps) {
+				var mapNum = gameMap;
+				gameMap = region.maps[gameMap];
+				if(gameMap.name == mapName)
+				{
+				for (i = 0, il = gameMap.points_of_interest.length; i < il; i++) {
+					poi = gameMap.points_of_interest[i];
+					if (poi.type == "waypoint") {
+						if($('input[name=showWaypoints]').is(':checked')){
+							var wpIcon = new waypointIcon();
+							waypoint = L.marker(unproject([poi.coord[0]* multiplier,poi.coord[1]* multiplier]), {
+							title: poi.name + " (" + poi.coord + ")", icon: wpIcon
+							});
+							points.push(waypoint);
+						}
+					}
+					
+					else if (poi.type == "vista") {
+						if($('input[name=showVistas]').is(':checked')){
+							var vistaIcon = new vistaPointIcon();
+							var vista = L.marker(unproject([poi.coord[0]* multiplier,poi.coord[1]* multiplier]), {
+							title: poi.name + " (" + poi.coord + ")", icon: vistaIcon
+							});
+							points.push(vista);
+						}
+					}			
+
+					else if (poi.type == "landmark") {
+						if($('input[name=showPOI]').is(':checked')){
+							var poiIcon = new pointOfInterestIcon();
+							var	pointOfIntrest = L.marker(unproject([poi.coord[0]* multiplier,poi.coord[1]* multiplier]), {
+							title: poi.name + " (" + poi.coord + ")", icon: poiIcon
+						});
+							points.push(pointOfIntrest);
+						}
+					}
+					
+					for (j = 0, jl = gameMap.skill_challenges.length; j < jl; j++) {
+						if($('input[name=showSkills]').is(':checked')){
+							skill = gameMap.skill_challenges[j];
+							var skillIcon = new skillChallengeIcon();
+							var	skillChallenge = L.marker(unproject([skill.coord[0]* multiplier,skill.coord[1]* multiplier]), {
+							title: "Skill Challenge", icon: skillIcon
+						});
+							points.push(skillChallenge);
+						}
+					}
+					
+					for (k = 0, kl = gameMap.tasks.length; k < kl; k++) {
+						if($('input[name=showHearts]').is(':checked')){
+							heart = gameMap.tasks[k];
+							var heartIcon = new heartQuestIcon();
+							var heartQuest = L.marker(unproject([heart.coord[0]* multiplier,heart.coord[1]* multiplier]), {
+							title: "Heart Quest", icon: heartIcon
+						});
+							points.push(heartQuest);
+					}
+					}
+				
+				}
+				}
+				
+			}
+		}
+	layerGroup = L.layerGroup(points);
+	layerGroup.addTo(map);
+	});	
+	
+}
+
+function updatePosition() {	
+	if(currentContinent != continent) {
+		tiles.setUrl("https://tiles.guildwars2.com/"+continent+"/1/{z}/{x}/{y}.jpg");
+		currentContinent = continent;
+	}
+	$.getJSON("http://localhost:1337/",  function (jsonData) {
+		var markers = new Array();
+		var footprints = new Array();
+		if(jsonData.mapName == " Borderlands" || jsonData.mapName == "Eternal Battlegrounds" || jsonData.mapName == "Edge of the Mists" || jsonData.mapName == "Obsidian Sanctum"){
+			continent = 2;
+			multiplier = 2;
+		}
+		else{
+			continent = 1;
+			multiplier = 1;
+		}
+		if (jsonData.mapName !== mapName){
+			//console.log(mapName);
+			addMarkers(jsonData.mapName);
+			mapName = jsonData.mapName;
+		}
+		if (markerGroup != null) {
+		   markerGroup.clearLayers();
+		}
+		
+		var pX = jsonData.posX;
+		var pY = jsonData.posY;
+		var posX = parseFloat(pX.replace(',', '.'));
+		var posY = parseFloat(pY.replace(',', '.'));
+		
+		var pR = jsonData.playerRotation;
+		var cR = jsonData.camRotation;
+		var playerRotation = parseFloat(pR.replace(',', '.'));
+		var cameraRotation = parseFloat(cR.replace(',', '.'));
+		
+		playerMarker = L.marker(unproject([posX * multiplier, posY * multiplier]), { icon: new playerIcon(), title: "test" });
+		cameraMarker = L.marker(unproject([posX * multiplier, posY * multiplier]), { icon: new cameraIcon(), title: "test" });
+		footprintMarker = L.marker(unproject([posX * multiplier, posY * multiplier]), { icon: new footprintIcon(), title: "test" });
+		
+		markers.push(playerMarker);
+		markers.push(cameraMarker);		
+		footprints.push(footprintMarker);
+		
+		markerGroup = L.layerGroup(markers);
+		footprintGroup = L.layerGroup(footprints);
+
+		markerGroup.addTo(map);
+		if($('input[name=playerFootprints]').is(':checked')){
+			footprintGroup.addTo(map);
+			footprintMarker._icon.style[L.DomUtil.TRANSFORM] += ' rotate(-'+playerRotation+'deg)';
+		}
+		
+		playerMarker._icon.style[L.DomUtil.TRANSFORM] += ' rotate(-'+playerRotation+'deg)';
+		cameraMarker._icon.style[L.DomUtil.TRANSFORM] += ' rotate(-'+cameraRotation+'deg)';
+		
+		//Player tracking. centerCount used to keep centering from happening too fast
+		if($('input[name=trackPlayer]').is(':checked') && centerCount >= 10){
+			map.panTo(unproject([posX * multiplier, posY * multiplier]));
+			centerCount = 0;
+		}
+			
+	});
+	centerCount +=1;
+}
+	
+//Used only from GUI check boxes to create a markers array based on what is selected	
+function markerOptions() {	
+	$.getJSON("http://localhost:1337/",  function (jsonData) {
+		var markers = new Array();
+			addMarkers(jsonData.mapName);
+			mapName = jsonData.mapName;
+	})
+}
+	
+	
+
+ </script>
+	<?php
+$con=mysqli_connect("","","","gathering_nodes");
+// Check connection
+if (mysqli_connect_errno())
+  {
+  echo "Failed to connect to MySQL: " . mysqli_connect_error();
+  }
+
+$result = mysqli_query($con,"SELECT * FROM jade_quarry");
+while($row = mysqli_fetch_array($result))
+  {
+  //echo $row['node_type']." at ".$row['coordinateX'].",".$row['coordinateY'];
+  echo "<script>alert('testing');</script>";
+  echo "<br>";
+  }
+?>
+	
+
+    </body>
+</html>
